@@ -1,0 +1,1 @@
+ALTER TABLE analyze_task ENGINE=InnoDB DEFAULT CHARSET=utf8;

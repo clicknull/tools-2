@@ -1,0 +1,1 @@
+ALTER TABLE analyze_rule ENGINE=InnoDB DEFAULT CHARSET=utf8;

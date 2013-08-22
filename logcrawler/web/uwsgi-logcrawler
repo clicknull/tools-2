@@ -1,0 +1,141 @@
+#!/bin/bash
+#
+# Init file for uwsgi server daemon
+#
+# chkconfig: 2345 55 25
+# description: rest for traceall-collect-logcrawler
+#
+# processname: uwsgi-logcrawler
+#
+
+
+NAME=uwsgi-logcrawler
+COMMAND=/usr/bin/uwsgi
+CONFINI=uwsgi.ini
+PID=/var/run/${NAME}.pid
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+# Source networking configuration.
+. /etc/sysconfig/network
+# Source setting.
+. /etc/profile
+
+wait_for_pid () {
+    try=0
+    while test $try -lt 5 ; do
+        case "$1" in
+            'created')
+            if [ -f "$2" ] ; then
+                try=''
+                break
+            fi
+            ;;
+            'removed')
+            if [ ! -f "$2" ] ; then
+                try=''
+                break
+            fi
+            ;;
+        esac
+        echo -n .
+        try=`expr $try + 1`
+        sleep 1
+    done
+}
+
+
+case "$1" in
+    start)
+        if [ -r $PID ] ; then 
+            if [ $(ps -ef|grep `cat $PID`|grep $NAME|grep -v grep|wc -l) -gt 0 ] ; then
+                echo "start failed, $NAME `cat $PID` already run"
+                exit 1
+            fi
+        fi
+
+        echo -n "Starting $NAME "
+        ulimit -n 10000
+        $COMMAND --ini $CONFINI --pidfile $PID
+
+        if [ "$?" != 0 ] ; then
+            echo " failed"
+            exit 1
+        fi
+        wait_for_pid created $PID
+
+        $0 status
+    ;;
+
+    stop)
+        echo -n "Shutting down $NAME "
+        if [ ! -r $PID ] ; then
+            echo "stop failed, no pid file found - $NAME is not running ?"
+            exit 1
+        fi
+
+        $COMMAND --stop $PID
+        wait_for_pid removed $PID
+
+        if [ -r $PID ] ; then
+            if [ $(ps -ef|grep `cat $PID`|grep $NAME|grep -v grep|wc -l) -gt 0 ] ; then
+                echo "stop failed, please try again"
+                exit 1
+            else
+                rm $PID
+            fi
+        fi
+
+        $0 status
+    ;;
+
+    status)
+        status $NAME
+        exit $?
+    ;;
+
+    force-exit)
+        echo -n "force-exiting $NAME "
+        if [ ! -r $PID ] ; then
+            echo "exit failed, no pid file found - $NAME is not running ?"
+            exit 1
+        fi
+
+        kill -TERM `cat $PID`
+        echo "...wait some time..."
+        sleep 5
+
+        if [ -r $PID ] ; then
+            if [ $(ps -ef|grep `cat $PID`|grep $NAME|grep -v grep|wc -l) -gt 0 ] ; then
+                echo "exit failed, please try 'kill -9'"
+                exit 1
+            else
+                rm $PID
+            fi
+        fi
+
+        $0 status
+    ;;
+
+    restart)
+        $0 stop
+        $0 start
+    ;;
+
+    reload)
+        $COMMAND --reload $PID
+        if [ $? = 0 ]; then
+            echo "$name reload done"
+        else
+            echo "$name reload failed"
+            exit 1
+        fi
+    ;;
+
+    *)
+        echo "Usage: $0 {start|stop|restart|reload|status|force-exit}"
+        exit 1
+    ;;
+
+esac
+

@@ -1,0 +1,88 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+        <title>Logcrawler</title>
+
+        <link rel="icon" href="{% static 'images/favicon.ico' %}" mce_href="{% static 'images/favicon.ico' %}" type="image/x-icon">
+        <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}" mce_href="{% static 'images/favicon.ico' %}" type="image/x-icon">
+        
+        <link href="{% static 'css/demo_page.css' %}" rel="stylesheet" media="screen">
+        <link href="{% static 'css/jquery.dataTables.css' %}" rel="stylesheet" media="screen">
+
+        <script src="{% static 'js/jquery.min.js' %}"></script>
+        <script src="{% static 'js/jquery.dataTables.js' %}"></script>
+        <script src="{% static 'js/datatables.fnReloadAjax.js' %}"></script>
+        <script src="{% static 'js/moment.min.js' %}"></script>
+        <script src="{% static 'js/logcrawler.consolebasetable.js' %}"></script>
+        
+        {% if tag == "crawl" %}
+        <script src="{% static 'js/logcrawler.crawl.js' %}"></script>
+        {% elif tag == "analyze" %}
+        <script src="{% static 'js/logcrawler.analyze.js' %}"></script>
+        {% endif %}
+
+        <script type="text/javascript" charset="utf-8">
+            var bAutoloadFlag = false;
+
+            $(document).ready(function() {
+                /* Init DataTables */
+
+                var sSource = "{{ source }}";
+                var sQuery = fnGetQuery(); 
+                var sAjaxSource = sSource + sQuery;
+                var oSettings = fnGetTableSettings(sAjaxSource);
+                
+                var oTable = $('#items').dataTable(oSettings);
+
+                /* auto reload ajax source */
+                
+                updateTable();
+                fnToggleAutoload();
+                
+                function updateTable() {
+                    var sQuery = fnGetQuery();
+                    var sAjaxSource = sSource + sQuery;
+
+                    setTimeout(updateTable, 5000);
+                    if (bAutoloadFlag) {
+                        oTable.fnReloadAjax(sAjaxSource);
+                    }
+                }
+            });
+        </script>
+    </head>
+    <body id="dt_example">
+        <div id="container">
+            <div class="full_width big">
+                {{ title }}
+            </div>
+
+            <h1 id="autoload_hint">Autoload crawling tasks in
+                <select id="select_minutes">
+                    <option value="3">3min</option>
+                    <option value="60">1hour</option>
+                    <option value="1440">1day</option>
+                </select>
+                <input type="checkbox" id="check"/><label for="check">Autoload disabled</label>
+            </h1>
+
+            <table id="items" cellpadding="0" cellspacing="0" border="0" class="display">
+                <thead>
+                    <tr>
+                        {% for theader in theaders %}
+                        <th>{{ theader }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        <div style="margin-top:100px"></div>
+    </body>
+
+</html>
+
+
+

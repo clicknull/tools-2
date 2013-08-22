@@ -1,0 +1,76 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+        <title>Logcrawler</title>
+
+        <link href="{% static 'css/demo_page.css' %}" rel="stylesheet" media="screen">
+        <link href="{% static 'css/jquery.dataTables.css' %}" rel="stylesheet" media="screen">
+
+        <script src="{% static 'js/jquery.min.js' %}"></script>
+        <script src="{% static 'js/jquery.dataTables.js' %}"></script>
+        <script src="{% static 'js/jquery.jeditable.js' %}"></script>
+        <script src="{% static 'js/datatables.fnReloadAjax.js' %}"></script>
+        <script src="{% static 'js/moment.min.js' %}"></script>
+        <script src="{% static 'js/logcrawler.basetable.js' %}"></script>
+        
+        {% if tag == "idc" %}
+        <script src="{% static 'js/logcrawler.idc.js' %}"></script>
+        {% elif tag == "rules" %}
+        <script src="{% static 'js/logcrawler.rules.js' %}"></script>
+        {% endif %}
+
+        <script type="text/javascript" charset="utf-8">
+            var sAjaxSource = "{{ source }}";
+
+            $(document).ready(function() {
+                fnInitDatatable(sAjaxSource, fnInitComplete);
+            });
+            
+            var fnInitComplete = function(oSettings, json) {
+                fnMakeEditable();
+            }
+
+            var fnGetAjaxSource = function() {
+                return sAjaxSource;
+            }
+        </script>
+    </head>
+    <body id="dt_example">
+        <div id="container">
+            <div class="full_width big">
+                {{ title }}
+            </div>
+
+            <br />
+            <p>
+                <a id="add" style="padding-left:0px" href="javascript:void(0);" onclick="fnClickAdd();">添加配置</a>
+                <a id="save" style="padding-left:15px" href="javascript:void(0);" onclick="fnClickSave();" hidden>保存修改</a>
+                {% if tag == "rules" %}
+                    <a id="verify" style="padding-left:15px" href="javascript:void(0);" onclick="fnClickVerify();">前向校验</a>
+                {% endif %}
+            <p>
+            <hr>
+
+            <table id="main" cellpadding="0" cellspacing="0" border="0" class="display" style="width: 1440px;">
+                <thead>
+                    <tr>
+                        {% for theader in theaders %}
+                        <th>{{ theader }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        {% if tag == "rules" %}
+            <div id="verification"></div>
+        {% endif %}
+        <div style="margin-top:100px"></div>
+    </body>
+
+</html>
+
+
+
