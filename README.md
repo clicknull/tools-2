@@ -16,7 +16,7 @@ monitoring of crawling progress and monitoring of analyze.
 * Django 1.4 or up
 * Works on Linux
 
-## Install
+## Installation
 
 TO BE FIX
 
