@@ -1,18 +1,15 @@
 import logging
 
 from rest_framework.decorators import api_view, renderer_classes
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer, JSONPRenderer
-# from rest_framework.authentication import BasicAuthentication
-# from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.response import Response
 
 from application.models.crawl_stat import CrawlStatus
 
 
 @api_view(['GET'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def oldget(request):
+def get(request):
     params = request.QUERY_PARAMS.dict()
     trans_params = {}
     for key in params:
@@ -35,7 +32,7 @@ def oldget(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def oldcreate(request):
+def create(request):
     params = request.DATA
     try:
         logging.info(msg="create %s" % str(params))
@@ -48,7 +45,7 @@ def oldcreate(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def oldupdate(request):
+def update(request):
     params = request.DATA
     try:
         logging.info(msg="update download: %s" % str(params))
@@ -71,7 +68,7 @@ def oldupdate(request):
 
 @api_view(['GET'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def olddelete(request):
+def delete(request):
     params = request.QUERY_PARAMS.dict()
     trans_params = {}
     for key in params:
@@ -95,27 +92,3 @@ def olddelete(request):
         logging.error(msg="[delete]%s error occur: %s" % (str(params), err))
         return Response({"status": "nok", "detail": str(err)})
     return Response({"status": "ok", "detail": str(params)})
-
-
-class CrawlStatuses(APIView):
-
-    renderer_classes = (JSONRenderer, JSONPRenderer)
-    # authentication_classes = (BasicAuthentication, )
-    # permission_classes = (IsAuthenticatedOrReadOnly, )
-
-    def get(self, request, format=None):
-        """Read"""
-        pass
-
-    def post(self, request, format=None):
-        """Create"""
-        pass
-
-    def put(self, request, format=None):
-        """Update"""
-        pass
-
-    def delete(self, request, format=None):
-        """Delete"""
-        pass
-

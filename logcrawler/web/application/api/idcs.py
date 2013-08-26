@@ -17,7 +17,7 @@ from application.models.idc import IDCConfig
 @renderer_classes((JSONRenderer, JSONPRenderer))
 @authentication_classes((BasicAuthentication, ))
 @permission_classes((IsAuthenticatedOrReadOnly, ))
-def oldget(request):
+def get(request):
     ## To fix bug of connection in django1.5
     # import django
     # django.db.connection.close()
@@ -34,7 +34,7 @@ def oldget(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def oldcreate(request):
+def create(request):
     params = request.DATA
     try:
         logging.info(msg="create %s" % str(params))
@@ -47,7 +47,7 @@ def oldcreate(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def oldupdate(request):
+def update(request):
     params = request.DATA
     try:
         primary = {
@@ -68,7 +68,7 @@ def oldupdate(request):
 
 @api_view(['GET'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def olddelete(request):
+def delete(request):
     params = request.QUERY_PARAMS.dict()
     try:
         if params:
@@ -90,7 +90,7 @@ def olddelete(request):
 @renderer_classes((JSONRenderer, JSONPRenderer))
 @authentication_classes((BasicAuthentication, ))
 @permission_classes((IsAuthenticatedOrReadOnly, ))
-def oldgetoptions(request):
+def getoptions(request):
     params = request.QUERY_PARAMS.dict()
     try:
         key = params["type"]

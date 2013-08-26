@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import os
+import sys
+import socket
+
 from logcrawler import common
 from logcrawler.spider import Spider
 from logcrawler.analyzer import analyze
@@ -14,10 +18,13 @@ celery.config_from_object(celeryconfig)
 
 @celery.task
 def download(url):
-    return Spider(root=config.ROOT).crawl(url)
+    try:
+        pid = os.fork()
+        if pid == 0:
+            Spider(root=config.ROOT).crawl(url)
+    except OSError, e:
+        sys.stderr.write('fork subprocess failed: %d (%s)\n' % (e.errno, e.strerr))
 
 @celery.task
 def analyze_process(filename):
-    logger.info(msg="analyze_process request.delivery_info %s" % analyze_process.request.delivery_info)
-    logger.info(msg="analyze_process filename %s" % filename)
     return analyze(filename)

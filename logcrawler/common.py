@@ -42,9 +42,8 @@ def get_logger(filename=None, topic=None):
     return get_multilogger(topic=topic, filename=filename)
 
 
-def get_multilogger(
-        name=None, topic=None, filename=None,
-        level=config.LOG_LEVEL, **kwargs):
+def get_multilogger(name=None, topic=None, filename=None,
+                    level=config.LOG_LEVEL, *args, **kwargs):
     """
     get logger with syslog_handler(UDP) or file_handler or both.
     if it is not the first time to call this function with the same value of 'name',
@@ -55,18 +54,8 @@ def get_multilogger(
         topic: topic(program name) used by syslog reciever(EXP:syslog-ng)
         filename: name of local log file
         level: level of logger
-
         host: remote host(ip)
         port: remote port
-        when: type of rotate interval
-            'S'     Seconds
-            'M'     Minutes
-            'H'     Hours
-            'D'     Days
-            'W'     Week day (0=Monday)
-            'midnight'     Roll over at midnight
-        backupCount: the most of log files that could be kept
-
         loglevel: log level
         format: format of log
         datefmt: format of date time in log
@@ -94,29 +83,28 @@ def get_multilogger(
 
     logger = logging.getLogger(name)
     if name in CREATED_LOGNAMES:
-        print "logger of [%s] in %s already created" % (name, __file__)
+        print "logger of syslog[%s] in %s already created" % (name, __file__)
     else:
         CREATED_LOGNAMES[name] = None
         logger.setLevel(level)
-
         if topic:
-            add_syslog_handler(logger=logger, topic=topic, **kwargs)
+            add_syslog_handler(logger=logger, topic=topic, *args, **kwargs)
         if filename:
-            add_timefile_handler(logger=logger, filename=filename, **kwargs)
-
+            add_file_handler(logger=logger, filename=filename, *args, **kwargs)
     return logger
 
 
 def add_syslog_handler(
         logger, topic,
-        host=config.SYSLOG_HOST, port=config.SYSLOG_PORT, **kwargs):
+        host=config.SYSLOG_HOST, port=config.SYSLOG_PORT,
+        loglevel=config.LOG_LEVEL, format=config.LOG_FORMAT, datefmt=config.LOG_DATEFMT,
+        *args, **kwargs):
     """
     Args:
         logger: instance of logger
         topic: topic used by syslog reciever(EXP:syslog-ng)
         host: remote host address
         port: remote port
-
         loglevel: log level
         format: format of log
         datefmt: format of date time in log
@@ -139,26 +127,19 @@ def add_syslog_handler(
     """
     prefix = topic + "[%(process)d]: "
     handler = logging.handlers.SysLogHandler(address=(host, port))
-    add_log_handler(logger=logger, handler=handler, fmtprefix=prefix, **kwargs)
+    handler.setLevel(loglevel)
+    handler.setFormatter(logging.Formatter(fmt=prefix+format, datefmt=datefmt))
+    logger.addHandler(handler)
     return handler
 
 
-def add_timefile_handler(
-        logger, filename,
-        when='D', backupCount=7, **kwargs):
+def add_stdout_handler(
+        logger,
+        loglevel=config.LOG_LEVEL, format=config.LOG_FORMAT, datefmt=config.LOG_DATEFMT,
+        *args, **kwargs):
     """
     Args:
         logger: instance of logger
-        filename: name of log file
-        when: type of rotate interval
-            'S'     Seconds
-            'M'     Minutes
-            'H'     Hours
-            'D'     Days
-            'W'     Week day (0=Monday)
-            'midnight'     Roll over at midnight
-        backupCount: the most of log files that could be kept
-
         loglevel: log level
         format: format of log
         datefmt: format of date time in log
@@ -168,33 +149,41 @@ def add_timefile_handler(
 
     Example:
         import logging
-        instance = logging.getLogger()
-        add_timefile_handler(instance)
+        instance_of_logger = logging.getLogger()
+        add_stdout_handler(instance_of_logger)
     """
-    handler = logging.handlers.TimedRotatingFileHandler(
-        filename=filename, when=when, backupCount=backupCount)
-    add_log_handler(logger=logger, handler=handler, **kwargs)
+    handler = logging.StreamHandler()
+    handler.setLevel(loglevel)
+    handler.setFormatter(logging.Formatter(fmt=format, datefmt=datefmt))
+    logger.addHandler(handler)
     return handler
 
 
-def add_log_handler(
-        logger, handler,
+def add_file_handler(
+        logger, filename,
         loglevel=config.LOG_LEVEL, format=config.LOG_FORMAT, datefmt=config.LOG_DATEFMT,
-        fmtprefix="", **kwargs):
+        *args, **kwargs):
     """
     Args:
         logger: instance of logger
-        handler: handler of log
-
+        filename: name of log file
         loglevel: log level
         format: format of log
         datefmt: format of date time in log
 
-        fmtprefix: prefix of format of log
+    Returns:
+        handler: handler add
+
+    Example:
+        import logging
+        instance_of_logger = logging.getLogger()
+        add_file_handler(instance_of_logger)
     """
+    handler = logging.FileHandler(filename)
     handler.setLevel(loglevel)
-    handler.setFormatter(logging.Formatter(fmt=fmtprefix+format, datefmt=datefmt))
+    handler.setFormatter(logging.Formatter(fmt=format, datefmt=datefmt))
     logger.addHandler(handler)
+    return handler
 
 
 def shortname(fullname):
@@ -208,7 +197,7 @@ def shortname(fullname):
         short, suffix = os.path.splitext(base)
         return short
     else:
-        return ""
+        return None
 
 
 def logfilename(fullname, logdir=config.LOG_PARENT):
@@ -218,7 +207,7 @@ def logfilename(fullname, logdir=config.LOG_PARENT):
         logfilename("/dir/test.py", "/var/log/sub")  => will get =>  "/var/log/sub/test.log"
     """
     short = shortname(fullname)
-    logname = os.path.join(logdir, short + ".log") if short else ""
+    logname = None if short is None else os.path.join(logdir, short + ".log")
     return logname
 
 

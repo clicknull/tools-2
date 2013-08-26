@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+""" The logcrawler engine which controls the Scheduler, Spider and Analyzer.
+"""
+
 import Queue
 import time
+import socket
 from threading import Thread, Timer
 from thread import get_ident
 
@@ -18,18 +22,14 @@ LOG = common.get_logger(filename=__file__, topic=__file__)
 
 
 class Engine(object):
-    def __init__(self, task_creator, schedule_interval=30,
-                 download_callback=None, analyze_callback=None):
-
-        self.task_creator = task_creator
-        self.task_creator.start()
+    def __init__(self, scheduler, download_callback=None, analyze_callback=None):
 
         self.download_callback = download_callback
         self.analyze_callback = analyze_callback
 
         self.checker = Thread(target=self.check)
-        self.scheduler = Cron()
-        self.scheduler.add_job(schedule_interval, self.schedule)
+        self.scheduler = scheduler
+        self.scheduler.add_output_callback(self.put_task)
 
         self._is_stopped = True
         self._is_checker_stopped = True
@@ -55,7 +55,6 @@ class Engine(object):
     def terminate(self):
         """ Terminate the engine.
         """
-        self.task_creator.stop()
 
         self.stop_scheduler()
         self._task_queue.join()
@@ -140,11 +139,11 @@ class Engine(object):
                 continue
 
             task_result = async_result.get()
-            url, result, path, hostname = task_result['url'], task_result['result'], task_result['local_path'], task_result['hostname']
+            url, result, path = task_result['url'], task_result['result'], task_result['local_path']
             if result in ['success']:
                 # task completed successfully
                 if self.analyze_callback:
-                    self.analyze_callback(path, hostname)
+                    self.analyze_callback(path)
             if result in ['ioerr']:
                 LOG.error(msg='Download task [%s] failed: ioerr.' % url)
             if result in ['httperr', 'connecterr']:
@@ -155,29 +154,51 @@ class Engine(object):
                     delay = config.TASK_RETRY_DELAY
                     self.put_task(task, delay)
 
+
+class Scheduler(Cron):
+    def __init__(self, task_creator, interval=30):
+        super(Scheduler, self).__init__()
+        self.add_job(interval, self.schedule)
+        self.task_creator = task_creator
+        self.task_creator.start()
+        self.output_callback = None
+
     def schedule(self):
-        download_tasks = self.task_creator.get_tasks()
-        for task in download_tasks:
+        if not self.output_callback:
+            raise ValueError('Output callback is None')
+        for task in self.create_tasks():
             real_task = {'url': task['src'], 'deadline': task['deadline']}
-            self.put_task(real_task)
+            self.output_callback(real_task)
 
+    def stop(self):
+        super(Scheduler, self).stop()
+        self.task_creator.stop()
+
+    def add_output_callback(self, callback):
+        self.output_callback = callback
+
+    def create_tasks(self):
+        download_tasks = self.task_creator.get_tasks()
         LOG.info(msg="schedule [%d] download tasks" % len(download_tasks))
-
-
-class EngineDaemon(Daemon):
-    def run(self):
-        factory = TaskFactory()
-        engine = Engine(factory, 30, _do_download)
-        engine.add_schedule_job(60, update_idc_current_status)
-        engine.run()
+        return download_tasks
 
 
 def _do_download(url):
     task_expires = config.DOWNLOAD_EXPIRE_SECONDS
     return tasks.download.apply_async((url,), expires=task_expires)
 
-def _do_analyze(path, hostname):
-    task_expires = config.ANALYZE_EXPIRE_SECONDS
-    queue = "analyze_%s" % hostname
-    id = tasks.analyze_process.apply_async((path,), queue=queue, expires=task_expires)
-    LOG.info(msg="Analyze %s with task %s in queue %s" % (path, id, queue))
+
+def _do_analyze(path):
+    queue = "analyze_%s" % socket.gethostname()
+    async_result = tasks.analyze_process.apply_async((path,), queue=queue)
+    LOG.info(msg="Analyze %s with task %s" % (path, async_result))
+    return async_result
+
+
+class EngineDaemon(Daemon):
+    def run(self):
+        factory = TaskFactory()
+        scheduler = Scheduler(task_creator=factory, interval=30)
+        engine = Engine(scheduler, _do_download, _do_analyze)
+        engine.add_schedule_job(60, update_idc_current_status)
+        engine.run()
