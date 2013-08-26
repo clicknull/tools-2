@@ -212,24 +212,6 @@ def logfilename(fullname, logdir=config.LOG_PARENT):
 
 
 def rename(old_path, new_path):
-    """将old_path重命名为new_path
-
-    将源路径old_path重命名为目标路径new_path,
-    对可能的异常进行捕获。
-
-    Args:
-        old_path: 源路径
-        new_path: 目标路径
-
-    Returns:
-        True: 重命名成功
-        False: 重命名失败
-
-    Example:
-    from common import secured_rename
-    secured_rename("/tmp/file1", "/tmp/file2")
-    secured_rename("/tmp/file1.log", "/tmp/file2.log")
-    """
     if not os.path.exists(old_path):
         logging.error(msg="path %s doesn't exist" % old_path)
         return False
@@ -260,24 +242,6 @@ def rename(old_path, new_path):
 
 
 def makedirs(path):
-    """创建path对应的目录
-
-    根据输入参数path对相应的目录进行判断，若目录不存在则递归建立path。
-    对可能的异常进行捕获。
-
-    Args:
-        path: 需要创建的目录
-
-    Returns:
-        True: 创建目录成功
-        False: 创建目录失败
-
-    Example:
-    from common import secured_makedirs
-    secured_makedirs("/tmp/foo/bar")
-    """
-
-    # 如果path已经存在，则直接返回
     if os.path.exists(path):
         return True
 
@@ -289,75 +253,7 @@ def makedirs(path):
     else:
         return True
 
-
-def fopen(filename, mode, filetype="plain"):
-    """以mode方式打开filename所指定的文件
-
-    以mode方式打开filename所指定的文件，对可能的异常进行捕获
-
-    Args:
-        filename: 需要打开的文件
-        mode: 文件打开方式
-        filetype: 文件类型，取值可以有以下两种
-                  "plain" -- 打开普通文件（默认）
-                  "gz" -- 打开gzip压缩文件
-
-    Returns:
-        file_descriptor: 文件打开成功, 返回文件描述符
-        None: 文件打开失败
-
-    Example:
-    from common import secured_open
-
-    secured_open("/foo/bar.log", "r")
-    """
-
-    # 检查filename是否为目录
-    if os.path.isdir(filename):
-        logging.warn(msg="filename %s is a directory" % filename)
-        return None
-
-    file_dir = os.path.dirname(filename)
-    # 当mode中匹配'w''wb''wb+''w+'’a''ab''ab+''a+'时，如果文件目录不存在，自动创建目录
-    if re.match("^[wa]b?\+?$", mode):
-        if not os.path.exists(file_dir):
-            if not makedirs(file_dir):
-                return None
-    try:
-        if "gz" == filetype:
-            file_descriptor = gzip.open(filename, mode)
-        else:
-            file_descriptor = open(filename, mode)
-    # 磁盘满时引发的异常在此不进行捕获
-    except IOError, error:
-        logging.warn(msg="can't open file [%s], catch exception %s:\n %s" %
-                     (filename, error, traceback.format_exc()))
-        return None
-    except ValueError, error:
-        logging.warn(msg="can't open file [%s], catch exception %s:\n %s" %
-                     (filename, error, traceback.format_exc()))
-        return None
-    return file_descriptor
-
-
 def remove(path):
-    """删除path参数所指定的路径
-
-    递归删除path参数所指定的路径，包括文件和文件夹
-    对可能的异常进行捕获
-
-    Args:
-        path: 待删除路径
-
-    Returns:
-        True: 路径删除成功
-        False: 路径删除失败
-
-    Example:
-    from common import secured_remove_path
-    secured_remove_path("/tmp/foo/bar/")
-    """
-
     def exception_handler(function, path, excinfo):
         """this one is only a callback function. it's useless."""
         logging.error(msg="%s Remove %s failed,catch exception\n %s\n %s" %
@@ -389,31 +285,3 @@ def async(func):
         thread.daemon = True
         thread.start()
     return wrapper
-
-
-class RestWrapper:
-    def __init__(self):
-        pass
-    def get(self,url,**kwargs):
-        try:
-            response = requests.get(url,**kwargs)
-            json_content = response.json()
-        except:
-            logging.error(msg="access to %s %s" % (url,traceback.format_exc(),))
-            print traceback.format_exc()
-            json_content = json.loads("{}", **kwargs)
-        return json_content
-
-    def post(self,url,**kwargs):
-        try:
-            kwargs["headers"] = {'content-type': 'application/json'}
-            data = kwargs.get("data","{}")
-            if isinstance(data, dict):
-                kwargs["data"] = json.dumps(data)
-            response = requests.post(url,**kwargs)
-            json_content = response.json()
-        except:
-            logging.error(msg="access to %s %s" % (url,traceback.format_exc(),))
-            print traceback.format_exc()
-            json_content = json.loads("{}")
-        return json_content

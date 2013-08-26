@@ -10,10 +10,10 @@ monitoring of crawling progress and monitoring of analyze.
 
 ## Requirements
 
-* Python 2.6 or Python 2.7
+* Python 2.6 or up
 * Celery 3.0
 * RabbitMQ
-* Django 1.5 or up
+* Django 1.4 or up
 * Works on Linux
 
 ## Install

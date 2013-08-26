@@ -4,16 +4,6 @@
 """ Cron is a Unixcrond-like job executor based on separated thread.
     What's different about Unix crond is that it is periodically perform
     the job by interval instead of clock-driven.
-
-    Usage:
-        >>> def func(text): print text 
-        >>> cron = Cron()
-        >>> cron.add_job(2, func, ('hello',))
-        >>> cron.run()
-
-        >>> time.sleep(5)
-        >>> cron.stop()
-        
 """
 
 from threading import Thread, Timer

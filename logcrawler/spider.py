@@ -82,7 +82,7 @@ class Spider(object):
         if not os.path.exists(parent):
             common.makedirs(parent)
         return path
-
+    
     @common.async
     def handle_crawl_start(self, url, start_time):
         """ Call RESTFul API to record crawling start.

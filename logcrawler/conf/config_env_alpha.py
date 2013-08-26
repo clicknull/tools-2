@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8
+
 # URL format of crawling task for spider 
 TASK_SRC_FMT = 'http://%(IDC_ip_address_port)s/%(service_name)s/%(YYYYmmddHH)s/%(IDC_name)s.%(YYYYmmddHHMM)s.gz'
 
