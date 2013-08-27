@@ -3,7 +3,7 @@
 
 ## Overview
 
-Logcrawler is a high-level log crawling framework, used to crawl log files that
+Logcrawler is a read-time oriented, high-level log crawling framework, used to crawl log files that
 gzipped in minutes on remote server. It supports configuration of source server,
 monitoring of crawling progress and monitoring of analyze.
 
