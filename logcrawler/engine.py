@@ -189,10 +189,20 @@ def _do_download(url):
 
 
 def _do_analyze(path):
-    queue = "analyze_%s" % socket.gethostname()
-    async_result = tasks.analyze_process.apply_async((path,), queue=queue)
+    async_result = tasks.analyze_process.apply_async((path,),)
     LOG.info(msg="Analyze %s with task %s" % (path, async_result))
     return async_result
+
+
+@Task
+def download_task(url, deadline):
+    ret = Spider(root=config.ROOT).crawl(url)
+    if ret['result'] in ['httperr', 'connecterr']:
+        raise RetryTaskError(message='download', delay=30, deadline=deadline)
+
+@Task
+def analyze_process(filename):
+    return analyze(filename)
 
 
 class EngineDaemon(Daemon):

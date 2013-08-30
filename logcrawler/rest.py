@@ -54,8 +54,8 @@ def _api_crawl_get(url):
     data = response.json()
     records = data['download'] if data['status'] == 'ok' else []
 
-    print "Crawl get request [%s]" % api_url
-    print "Crawl get response [%s]" % str(records)
+    logging.debug(msg="Crawl get request [%s]" % api_url)
+    logging.debug(msg="Crawl get response [%s]" % str(records))
     
     return records
 
@@ -82,8 +82,8 @@ def _api_crawl_create(url, size, status, desc, start, end):
     data = response.json()
     id = data['id'] if data['status'] == 'ok' else None
 
-    print "Crawl create request [%s]" % api_url
-    print "Crawl create response [%s]" % str(id) 
+    logging.debug(msg="Crawl create request [%s]" % api_url)
+    logging.debug(msg="Crawl create response [%s]" % str(id))
 
     return id
 
@@ -108,5 +108,5 @@ def _api_crawl_update(url, size, status, desc, start, end, id):
         logging.error(msg='Crawl update request error: [%s]' % str(error))
         return None
 
-    print "Crawl update request [%s]" % api_url
-    print "Crawl update response [%s]" % response.json()['status']
+    logging.debug(msg="Crawl update request [%s]" % api_url)
+    logging.debug(msg="Crawl update response [%s]" % response.json()['status'])

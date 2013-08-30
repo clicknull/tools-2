@@ -1,7 +1,7 @@
 # In CentOS, contents should be placed in the file /etc/sysconfig/celeryd
 
 # Names of nodes to start (space-separated)
-CELERYD_NODES="logcrawler"
+CELERYD_NODES="default"
 
 # Where to chdir at start. This could be the root of a virtualenv.
 # CELERYD_CHDIR="/home/workspace/logcrawler"

@@ -57,9 +57,6 @@ CELERYD_NODES=${CELERYD_NODES:-$DEFAULT_NODES}
 # be set to be run.
 export CELERY_LOADER
 
-HOSTNAME=`hostname`
-CELERYD_OPTS="$CELERYD_OPTS -Q celery,analyze_$HOSTNAME"
-
 if [ -n "$2" ]; then
     CELERYD_OPTS="$CELERYD_OPTS $2"
 fi
