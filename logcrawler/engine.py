@@ -6,7 +6,8 @@
 
 import Queue
 import time
-import socket
+import os
+import sys
 from threading import Thread, Timer
 from thread import get_ident
 
@@ -15,7 +16,10 @@ from logcrawler.factory import TaskFactory
 from logcrawler.probe import update_idc_current_status
 from logcrawler.conf import config
 from logcrawler.cron import Cron
-from logcrawler import tasks, common
+from logcrawler.task import Task, RetryTaskError
+from logcrawler.spider import Spider
+from logcrawler.analyzer import analyze as analyze_process
+from logcrawler import common
 
 
 LOG = common.get_logger(filename=__file__, topic=__file__)
@@ -48,7 +52,7 @@ class Engine(object):
             task = self.get_task()
             url, deadline = task.get("url"), task.get("deadline")
             if url and self.download_callback:
-                async_result = self.download_callback(url)
+                async_result = self.download_callback(url, deadline)
                 self.put_result((async_result, deadline))
                 LOG.info(msg="Download task [%s]" % url)
 
@@ -139,20 +143,12 @@ class Engine(object):
                 continue
 
             task_result = async_result.get()
-            url, result, path = task_result['url'], task_result['result'], task_result['local_path']
+            result, path = task_result['result'], task_result['local_path']
             if result in ['success']:
                 # task completed successfully
                 if self.analyze_callback:
+                    LOG.info(msg="Analyze %s with task" % path)
                     self.analyze_callback(path)
-            if result in ['ioerr']:
-                LOG.error(msg='Download task [%s] failed: ioerr.' % url)
-            if result in ['httperr', 'connecterr']:
-                # task completed unsuccessfully, restry with delay seconds
-                if deadline and time.time() < deadline:
-                    LOG.error(msg='Retry Download task [%s]' % url)
-                    task = {'url': url, 'deadline': deadline}
-                    delay = config.TASK_RETRY_DELAY
-                    self.put_task(task, delay)
 
 
 class Scheduler(Cron):
@@ -163,52 +159,54 @@ class Scheduler(Cron):
         self.task_creator.start()
         self.output_callback = None
 
-    def schedule(self):
-        if not self.output_callback:
-            raise ValueError('Output callback is None')
-        for task in self.create_tasks():
-            real_task = {'url': task['src'], 'deadline': task['deadline']}
-            self.output_callback(real_task)
+    def add_output_callback(self, callback):
+        self.output_callback = callback
 
     def stop(self):
         super(Scheduler, self).stop()
         self.task_creator.stop()
 
-    def add_output_callback(self, callback):
-        self.output_callback = callback
+    def schedule(self):
+        tasks = self.prepare()
+        for task in tasks:
+            real_task = {'url': task['src'], 'deadline': task['deadline']}
+            self.output_callback(real_task)
 
-    def create_tasks(self):
-        download_tasks = self.task_creator.get_tasks()
-        LOG.info(msg="schedule [%d] download tasks" % len(download_tasks))
-        return download_tasks
-
-
-def _do_download(url):
-    task_expires = config.DOWNLOAD_EXPIRE_SECONDS
-    return tasks.download.apply_async((url,), expires=task_expires)
-
-
-def _do_analyze(path):
-    async_result = tasks.analyze_process.apply_async((path,),)
-    LOG.info(msg="Analyze %s with task %s" % (path, async_result))
-    return async_result
+    def prepare(self):
+        tasks = self.task_creator.get_tasks()
+        LOG.info(msg="schedule [%d] download tasks" % len(tasks))
+        return tasks
 
 
 @Task
-def download_task(url, deadline):
+def download_task(url, deadline, async=False):
+    if async:
+        # fork new process and exit parent
+        try:
+            pid = os.fork()
+            if pid > 0:
+                sys.exit(0)
+        except OSError, e:
+            LOG.error(msg='fork subprocess failed: %d (%s)\n' % (e.errno, e.strerr))
+            sys.exit(1)
+
     ret = Spider(root=config.ROOT).crawl(url)
     if ret['result'] in ['httperr', 'connecterr']:
-        raise RetryTaskError(message='download', delay=30, deadline=deadline)
+        err =  RetryTaskError(message='download', delay=30, deadline=deadline)
+        LOG.warning(msg=str(err))
+        raise err
+
+    return ret
 
 @Task
-def analyze_process(filename):
-    return analyze(filename)
+def analyze_task(filename):
+    return analyze_process(filename)
 
 
 class EngineDaemon(Daemon):
     def run(self):
         factory = TaskFactory()
         scheduler = Scheduler(task_creator=factory, interval=30)
-        engine = Engine(scheduler, _do_download, _do_analyze)
+        engine = Engine(scheduler, download_task)
         engine.add_schedule_job(60, update_idc_current_status)
         engine.run()
