@@ -5,24 +5,22 @@
 """ 
 
 from kombu import Exchange, Queue
-from logcrawler.conf.config import CELERY_BROKER, CELERY_BACKEND
+from logcrawler.conf.config import CELERY_BROKER, CELERY_BACKEND, CELERY_WORKER_HOSTS
 
 
 BROKER_URL = CELERY_BROKER
 CELERY_RESULT_BACKEND = CELERY_BACKEND
 
 
-CELERY_QUEUES = (
+DEFAULT_QUEUE = (
     Queue('default', Exchange('default'), routing_key='default'),
-    Queue('analyze', Exchange('analyze'), routing_key='analyze'),
 )
+ANALYZE_QUEUE = tuple([
+    Queue(host, Exchange(host), routing_key=host) for host in CELERY_WORKER_HOSTS
+])
+CELERY_QUEUES = DEFAULT_QUEUE + ANALYZE_QUEUE
+
+
 CELERY_DEFAULT_QUEUE = 'default'
 CELERY_DEFAULT_EXCHANGE_TYPE = 'direct'
 CELERY_DEFAULT_ROUTING_KEY = 'default'
-
-CELERY_ROUTES = {
-    'logcrawler.tasks.analyze_process': {
-        'queue': 'analyze',
-        'routing_key': 'analyze',
-    },
-}

@@ -1,5 +1,6 @@
 # coding: utf-8
 
+
 # URL format of crawling task for spider 
 TASK_SRC_FMT = "http://%(IDC_ip_address_port)s/%(service_name)s/%(YYYYmmddHH)s/%(IDC_name)s.%(YYYYmmddHHMM)s.gz"
 
@@ -10,6 +11,9 @@ REST_PORT = '80'
 # CELERY BROKER & BACKEND URL
 CELERY_BROKER  = 'amqp://celeryu:celeryp@192.168.111.214:5673/celeryh'
 CELERY_BACKEND = 'amqp://guest@192.168.111.214:5673//'
+
+# Celery worker hostnames
+CELERY_WORKER_HOSTS = ['flume_211', 'flume_212', 'flume_213']
 
 # Django database settings
 DB_HOST = '192.168.111.220'

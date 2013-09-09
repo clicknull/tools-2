@@ -6,8 +6,6 @@
 
 import Queue
 import time
-import os
-import sys
 from threading import Thread, Timer
 from thread import get_ident
 
@@ -16,10 +14,7 @@ from logcrawler.factory import TaskFactory
 from logcrawler.probe import update_idc_current_status
 from logcrawler.conf import config
 from logcrawler.cron import Cron
-from logcrawler.task import Task, RetryTaskError
-from logcrawler.spider import Spider
-from logcrawler.analyzer import analyze as analyze_process
-from logcrawler import common
+from logcrawler import common, tasks
 
 
 LOG = common.get_logger(filename=__file__, topic=__file__)
@@ -53,7 +48,7 @@ class Engine(object):
             url, deadline = task.get("url"), task.get("deadline")
             if url and self.download_callback:
                 async_result = self.download_callback(url, deadline)
-                self.put_result((async_result, deadline))
+                self.put_result(async_result)
                 LOG.info(msg="Download task [%s]" % url)
 
     def terminate(self):
@@ -134,21 +129,21 @@ class Engine(object):
         LOG.info(msg="Start check thread [%d]" % get_ident())
 
         while not self._is_checker_stopped:
-            async_result, deadline = self.get_result()
+            async_result = self.get_result()
 
             if getattr(async_result, 'state', None) != 'SUCCESS':
                 # task does not completed
-                self.put_result((async_result, deadline))
+                self.put_result(async_result)
                 time.sleep(0.5)
                 continue
 
             task_result = async_result.get()
-            result, path = task_result['result'], task_result['local_path']
+            result, path, hostname = task_result['result'], task_result['local_path'], task_result['hostname']
             if result in ['success']:
                 # task completed successfully
                 if self.analyze_callback:
-                    LOG.info(msg="Analyze %s with task" % path)
-                    self.analyze_callback(path)
+                    LOG.info(msg="Analyze %s on host %s" % (path, hostname))
+                    self.analyze_callback(path, hostname)
 
 
 class Scheduler(Cron):
@@ -167,46 +162,27 @@ class Scheduler(Cron):
         self.task_creator.stop()
 
     def schedule(self):
-        tasks = self.prepare()
-        for task in tasks:
+        download_tasks = self.prepare()
+        for task in download_tasks:
             real_task = {'url': task['src'], 'deadline': task['deadline']}
             self.output_callback(real_task)
 
     def prepare(self):
-        tasks = self.task_creator.get_tasks()
-        LOG.info(msg="schedule [%d] download tasks" % len(tasks))
-        return tasks
+        download_tasks = self.task_creator.get_tasks()
+        LOG.info(msg="schedule [%d] download tasks" % len(download_tasks))
+        return download_tasks
 
+def download(url, deadline):
+    expires = config.DOWNLOAD_EXPIRE_SECONDS
+    return tasks.download.apply_async(args=(url, deadline), expires=expires)
 
-@Task
-def download_task(url, deadline, async=False):
-    if async:
-        # fork new process and exit parent
-        try:
-            pid = os.fork()
-            if pid > 0:
-                sys.exit(0)
-        except OSError, e:
-            LOG.error(msg='fork subprocess failed: %d (%s)\n' % (e.errno, e.strerr))
-            sys.exit(1)
-
-    ret = Spider(root=config.ROOT).crawl(url)
-    if ret['result'] in ['httperr', 'connecterr']:
-        err =  RetryTaskError(message='download', delay=30, deadline=deadline)
-        LOG.warning(msg=str(err))
-        raise err
-
-    return ret
-
-@Task
-def analyze_task(filename):
-    return analyze_process(filename)
-
+def analyze(filename, hostname):
+    return tasks.analyze.apply_async(args=(filename,), queue=hostname, routing_key=hostname)
 
 class EngineDaemon(Daemon):
     def run(self):
         factory = TaskFactory()
         scheduler = Scheduler(task_creator=factory, interval=30)
-        engine = Engine(scheduler, download_task)
+        engine = Engine(scheduler, download, analyze)
         engine.add_schedule_job(60, update_idc_current_status)
         engine.run()
