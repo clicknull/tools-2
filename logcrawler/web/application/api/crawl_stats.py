@@ -1,15 +1,19 @@
 import logging
 
-from rest_framework.decorators import api_view, renderer_classes
-from rest_framework.renderers import JSONRenderer, JSONPRenderer
+from rest_framework.decorators import api_view, renderer_classes, parser_classes
+from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.renderers import JSONRenderer, JSONPRenderer, XMLRenderer
+from rest_framework.parsers import JSONParser, XMLParser
+# from rest_framework.authentication import BasicAuthentication
+# from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from application.models.crawl_stat import CrawlStatus
 
 
 @api_view(['GET'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def get(request):
+def oldget(request):
     params = request.QUERY_PARAMS.dict()
     trans_params = {}
     for key in params:
@@ -32,7 +36,7 @@ def get(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def create(request):
+def oldcreate(request):
     params = request.DATA
     try:
         logging.info(msg="create %s" % str(params))
@@ -45,20 +49,14 @@ def create(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def update(request):
+def oldupdate(request):
     params = request.DATA
     try:
+        primary = {
+            "id": params["id"],
+        }
         logging.info(msg="update download: %s" % str(params))
-        if "id" in params:
-            primary = {
-                "id": params["id"],
-            }
-            del params["id"]
-        else:
-            primary = {
-                "url": params["url"],
-            }
-            del params["url"]
+        del params["id"]
         CrawlStatus.objects.filter(**primary).update(**params)
     except Exception, err:
         logging.error(msg="update %s error occur: %s" % (str(params), err))
@@ -68,7 +66,7 @@ def update(request):
 
 @api_view(['GET'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def delete(request):
+def olddelete(request):
     params = request.QUERY_PARAMS.dict()
     trans_params = {}
     for key in params:
@@ -92,3 +90,49 @@ def delete(request):
         logging.error(msg="[delete]%s error occur: %s" % (str(params), err))
         return Response({"status": "nok", "detail": str(err)})
     return Response({"status": "ok", "detail": str(params)})
+
+
+# --
+# new REST
+# --
+
+class CrawlStatuses(APIView):
+
+    # for all supported renderer of this class, to render response
+    # according to HTTP-HEAD-Accept or url.suffix.
+    # use url.suffix first, then Accept.
+    # if the two not match, raise exception(use first of renderer_classes).
+    # if url.suffix empty, use Accept in renderer_classes or raise exception(use first of renderer_classes).
+    # if both empty, use default Accept in first of renderer_classes or raise exception.
+    renderer_classes = (JSONRenderer, JSONPRenderer, XMLRenderer)
+
+    # parser class used to parse request
+    # if empty, use default in rest_framework.settings
+    # if HTTP-HEAD-content_type not in parser_classes, raise exception
+    parser_classes = (JSONParser, XMLParser)
+
+    # authentication_classes = (BasicAuthentication, )
+    # permission_classes = (IsAuthenticatedOrReadOnly, )
+
+    def get(self, request, format=None):
+        """Read"""
+        return Response({"status": "ok", "detail": "not support yet"})
+
+    def post(self, request, format=None):
+        """Create"""
+        return Response({"status": "ok", "detail": "not support yet"})
+
+    def put(self, request, format=None):
+        """Update"""
+        return Response({"status": "ok", "detail": "not support yet"})
+
+    def delete(self, request, format=None):
+        """Delete"""
+        return Response({"status": "ok", "detail": "not support yet"})
+
+
+@api_view(['GET'])
+@renderer_classes((JSONRenderer, JSONPRenderer, XMLRenderer))
+@parser_classes((JSONParser, XMLParser))
+def show(request, format=None):
+    return Response({"status": "ok", "detail": "not support yet"})

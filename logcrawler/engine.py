@@ -48,7 +48,7 @@ class Engine(object):
             url, deadline = task.get("url"), task.get("deadline")
             if url and self.download_callback:
                 async_result = self.download_callback(url, deadline)
-                self.put_result(async_result)
+                self.put_task_result(async_result)
                 LOG.info(msg="Download task [%s]" % url)
 
     def terminate(self):
@@ -83,7 +83,7 @@ class Engine(object):
         self._is_checker_stopped = True
         # put dummy result to stop checker
         if self._result_queue.qsize() == 0:
-            self.put_result((None, None))
+            self.put_task_result(None)
 
     def get_task(self, block=True, timeout=300):
         try:
@@ -104,7 +104,7 @@ class Engine(object):
             self._timer = Timer(delay, self._task_queue.put, [task, block])
             self._timer.start()
 
-    def get_result(self, block=True, timeout=None):
+    def get_task_result(self, block=True, timeout=None):
         """ Get async result from result queue.
             By default, it will be blocked until new result is available.
         """
@@ -115,7 +115,7 @@ class Engine(object):
         self._result_queue.task_done()
         return result
 
-    def put_result(self, result):
+    def put_task_result(self, result):
         """ Put async-result into result queue.
         """
         try:
@@ -123,36 +123,46 @@ class Engine(object):
         except Queue.Full:
             LOG.warn(msg="put message to result queue: full")
 
+    def filter_task_results(self):
+        """ Get successful task result and discard failed task result.
+        """
+        success_results = []
+
+        # FIXME: use yield
+        for i in range(self._result_queue.qsize()):
+            async_result = self.get_task_result()
+            if async_result.state == 'SUCCESS':
+                success_results.append(async_result)
+            elif async_result.state == 'FAILURE':
+                pass
+            else:
+                self.put_task_result(async_result)
+        return success_results
+
     def check(self):
         """ Check result of download tasks.
         """
         LOG.info(msg="Start check thread [%d]" % get_ident())
 
         while not self._is_checker_stopped:
-            async_result = self.get_result()
-
-            if getattr(async_result, 'state', None) != 'SUCCESS':
-                # task does not completed
-                self.put_result(async_result)
-                time.sleep(0.5)
-                continue
-
-            task_result = async_result.get()
-            result, path, hostname = task_result['result'], task_result['local_path'], task_result['hostname']
-            if result in ['success']:
-                # task completed successfully
-                if self.analyze_callback:
-                    LOG.info(msg="Analyze %s on host %s" % (path, hostname))
-                    self.analyze_callback(path, hostname)
+            for async_result in self.filter_task_results():
+                download_result = async_result.get()
+                result, path, hostname = download_result['result'], download_result['local_path'], download_result['hostname']
+                if result in ['success']:
+                    # do analyze
+                    if self.analyze_callback:
+                        LOG.info(msg="Analyze %s on host %s" % (path, hostname))
+                        self.analyze_callback(path, hostname)
+            time.sleep(0.1)
 
 
 class Scheduler(Cron):
     def __init__(self, task_creator, interval=30):
         super(Scheduler, self).__init__()
-        self.add_job(interval, self.schedule)
         self.task_creator = task_creator
         self.task_creator.start()
         self.output_callback = None
+        self.add_job(interval, self.schedule)
 
     def add_output_callback(self, callback):
         self.output_callback = callback

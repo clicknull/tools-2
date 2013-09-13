@@ -1,9 +1,6 @@
 import logging
 
 from rest_framework.decorators import api_view, renderer_classes
-from rest_framework.renderers import JSONRenderer, JSONPRenderer
-from rest_framework.response import Response
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer, JSONPRenderer
@@ -15,7 +12,7 @@ from application.models.analyze_stat import AnalyzeStatus
 
 @api_view(['GET'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def get(request):
+def oldget(request):
     params = request.QUERY_PARAMS.dict()
     trans_params = {}
     for key in params:
@@ -38,7 +35,7 @@ def get(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def create(request):
+def oldcreate(request):
     params = request.DATA
     try:
         logging.info(msg="create %s" % str(params))
@@ -51,7 +48,7 @@ def create(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def update(request):
+def oldupdate(request):
     params = request.DATA
     try:
         primary = {
@@ -68,7 +65,7 @@ def update(request):
 
 @api_view(['GET'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def delete(request):
+def olddelete(request):
     params = request.QUERY_PARAMS.dict()
     trans_params = {}
     for key in params:
@@ -92,27 +89,3 @@ def delete(request):
         logging.error(msg="[delete]%s error occur: %s" % (str(params), err))
         return Response({"status": "nok", "detail": str(err)})
     return Response({"status": "ok", "detail": str(params)})
-
-
-class AnalyzeStatsView(APIView):
-
-    renderer_classes = (JSONRenderer, JSONPRenderer)
-    # authentication_classes = (BasicAuthentication, )
-    # permission_classes = (IsAuthenticatedOrReadOnly, )
-
-    def get(self, request):
-        """Read"""
-        pass
-
-    def post(self):
-        """Create"""
-        pass
-
-    def put(self):
-        """Update"""
-        pass
-
-    def delete(self):
-        """Delete"""
-        pass
-

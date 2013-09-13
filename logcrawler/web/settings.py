@@ -1,9 +1,6 @@
 # Django settings for rest project.
 
 import os
-import sys
-import socket
-import logging
 from logcrawler.conf.config import DB_HOST, DB_PORT
 
 DEBUG = True
@@ -134,11 +131,17 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
 )
 
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error when DEBUG=False.
 # See http://docs.djangoproject.com/en/dev/topics/logging for
 # more details on how to customize your logging configuration.
+
+LOG_FILENAME = '/var/log/logcrawler/web.log'
+if not os.path.exists(os.path.dirname(LOG_FILENAME)):
+    os.makedirs(os.path.dirname(LOG_FILENAME))
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -147,28 +150,39 @@ LOGGING = {
             '()': 'django.utils.log.RequireDebugFalse'
         }
     },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        }
-    },
     'loggers': {
         'django.request': {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': True,
         },
+    },
+
+
+    'formatters': {
+        'style1': {
+            'format': '%(levelname)s [%(asctime)s][%(filename)s:%(funcName)s:%(lineno)d] %(message)s'
+        }
+    },
+    'handlers': {
+        'mail_admins': {
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+            'class': 'django.utils.log.AdminEmailHandler'
+        },
+        'timely_file': {
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': LOG_FILENAME,
+            'when': 'D',
+            'backupCount': 30,
+            'level': 'INFO',
+            'formatter': 'style1'
+        }
+    },
+    'root': {
+        'handlers': ['timely_file'],
+        'level': 'INFO'
     }
+
 }
 
-LOG_FILENAME = "/var/log/logcrawler/web.log"
-if not os.path.exists(os.path.dirname(LOG_FILENAME)):
-    os.makedirs(os.path.dirname(LOG_FILENAME))
-# Logging config
-logging.basicConfig(
-    filename=LOG_FILENAME,
-    level=logging.INFO,
-    format='%(levelname)s [%(asctime)s][%(filename)s:%(funcName)s:%(lineno)d] %(message)s',
-)

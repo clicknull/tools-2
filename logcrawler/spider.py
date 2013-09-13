@@ -34,6 +34,14 @@ class Spider(object):
     def _crawl(self, url):
         """ Crawl target url by HTTP GET.
         """
+	
+	host  = urlparse(url).netloc.split(":")[0]
+        if common.is_ipaddress(host) and common.is_public_IP(host):
+	    proxy = {'http': 'http://192.168.111.210:8080'}
+            handler = urllib2.ProxyHandler(proxy)
+	    opener = urllib2.build_opener(handler)
+	    urllib2.install_opener(opener)
+
         local_path = self.get_local_path(url)
         temp_local_path = local_path + '.tmp'
         try:
@@ -52,6 +60,10 @@ class Spider(object):
             self._notify_success()
 
         LOG.info(msg="crawl url [%s] result: [%s]" % (url, self._error))
+        
+        opener = urllib2.build_opener(urllib2.HTTPHandler)
+        urllib2.install_opener(opener)
+
         return self._error, size, local_path
 
     def _notify_err(self, err):

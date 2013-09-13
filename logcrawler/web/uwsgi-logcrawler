@@ -9,10 +9,20 @@
 #
 
 
+SOURCE="$0"
+while [ -h "$SOURCE" ]; do                          # resolve $SOURCE until the file is no longer a symlink
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"      # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+
+
 NAME=uwsgi-logcrawler
 COMMAND=/usr/bin/uwsgi
+CONFDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 CONFINI=uwsgi.ini
 PID=/var/run/${NAME}.pid
+
 
 # Source function library.
 . /etc/rc.d/init.d/functions
@@ -20,6 +30,7 @@ PID=/var/run/${NAME}.pid
 . /etc/sysconfig/network
 # Source setting.
 . /etc/profile
+
 
 wait_for_pid () {
     try=0
@@ -56,7 +67,7 @@ case "$1" in
 
         echo -n "Starting $NAME "
         ulimit -n 10000
-        $COMMAND --ini $CONFINI --pidfile $PID
+        cd $CONFDIR && $COMMAND --ini $CONFINI --pidfile $PID
 
         if [ "$?" != 0 ] ; then
             echo " failed"

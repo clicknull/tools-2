@@ -29,7 +29,7 @@ KAFKA_URL = "kafka://192.168.111.215:9092/"
 @renderer_classes((JSONRenderer, JSONPRenderer))
 @authentication_classes((BasicAuthentication, ))
 @permission_classes((IsAuthenticatedOrReadOnly, ))
-def get(request):
+def oldget(request):
     params = request.QUERY_PARAMS.dict()
     try:
         objs = AnalyzeRule.objects.filterX(**params)
@@ -42,7 +42,7 @@ def get(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def create(request):
+def oldcreate(request):
     params = request.DATA
     try:
         if not support_regexp(params["regexp"]):
@@ -62,7 +62,7 @@ def create(request):
 
 @api_view(['POST'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def update(request):
+def oldupdate(request):
     params = request.DATA
     try:
         primary = {
@@ -91,7 +91,7 @@ def update(request):
 
 @api_view(['GET'])
 @renderer_classes((JSONRenderer, JSONPRenderer))
-def delete(request):
+def olddelete(request):
     params = request.QUERY_PARAMS.dict()
     try:
         if params:
@@ -113,7 +113,7 @@ def delete(request):
 @renderer_classes((JSONRenderer, JSONPRenderer))
 @authentication_classes((BasicAuthentication, ))
 @permission_classes((IsAuthenticatedOrReadOnly, ))
-def getoptions(request):
+def oldgetoptions(request):
     params = request.QUERY_PARAMS.dict()
     try:
         key = params["type"]
