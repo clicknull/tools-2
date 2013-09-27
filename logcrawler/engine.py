@@ -21,14 +21,12 @@ LOG = common.get_logger(filename=__file__, topic=__file__)
 
 
 class Engine(object):
-    def __init__(self, scheduler, download_callback=None, analyze_callback=None):
-
-        self.download_callback = download_callback
-        self.analyze_callback = analyze_callback
+    def __init__(self, spider=None, analyzer=None, schedule_interval=30):
+        self.executer = task_executer(spider, analyzer)
 
         self.checker = Thread(target=self.check)
-        self.scheduler = scheduler
-        self.scheduler.add_output_callback(self.put_task)
+        self.scheduler = Scheduler(interval=schedule_interval)
+        self.scheduler.add_consumer_callback(self.put_task)
 
         self._is_stopped = True
         self._is_checker_stopped = True
@@ -45,16 +43,23 @@ class Engine(object):
 
         while not self._is_stopped:
             task = self.get_task()
-            url, deadline = task.get("url"), task.get("deadline")
-            if url and self.download_callback:
-                async_result = self.download_callback(url, deadline)
-                self.put_task_result(async_result)
-                LOG.info(msg="Download task [%s]" % url)
+            task_result = self.perform_task(task)
+            if task_result:
+                self.put_task_result(task_result)
+
+    def perform_task(self, task):
+        """ Perform one task and return async task result.
+        """
+        url, deadline = task["url"], task["deadline"]
+        if url:
+            logger.info(msg="Download task [%s]" % url)
+            return self.executer(url, deadline)
+        else:
+            return None
 
     def terminate(self):
         """ Terminate the engine.
         """
-
         self.stop_scheduler()
         self._task_queue.join()
         self._result_queue.join()
@@ -157,29 +162,32 @@ class Engine(object):
 
 
 class Scheduler(Cron):
-    def __init__(self, task_creator, interval=30):
+    def __init__(self, factory=None, interval=30):
         super(Scheduler, self).__init__()
-        self.task_creator = task_creator
-        self.task_creator.start()
-        self.output_callback = None
+        if factory:
+            self.factory = factory
+        else:
+            self.factory = TaskFactory()
+        self.factory.start()
+        self.consumer_callback = None
         self.add_job(interval, self.schedule)
 
-    def add_output_callback(self, callback):
-        self.output_callback = callback
+    def add_consumer_callback(self, callback):
+        self.consumer_callback = callback
 
     def stop(self):
         super(Scheduler, self).stop()
-        self.task_creator.stop()
+        self.factory.stop()
 
     def schedule(self):
         download_tasks = self.prepare()
         for task in download_tasks:
             real_task = {'url': task['src'], 'deadline': task['deadline']}
-            self.output_callback(real_task)
+            self.consumer_callback(real_task)
 
     def prepare(self):
-        download_tasks = self.task_creator.get_tasks()
-        LOG.info(msg="schedule [%d] download tasks" % len(download_tasks))
+        download_tasks = self.factory.get_tasks()
+        logger.info(msg="schedule [%d] download tasks" % len(download_tasks))
         return download_tasks
 
 def download(url, deadline):
