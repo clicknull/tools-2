@@ -35,9 +35,9 @@ class Spider(object):
         """ Crawl target url by HTTP GET.
         """
 	
-	host  = urlparse(url).netloc.split(":")[0]
+        host  = urlparse(url).netloc.split(":")[0]
         if common.is_ipaddress(host) and common.is_public_IP(host):
-	    proxy = {'http': 'http://192.168.111.210:8080'}
+            proxy = {'http': 'http://192.168.111.210:8080'}
             handler = urllib2.ProxyHandler(proxy)
 	    opener = urllib2.build_opener(handler)
 	    urllib2.install_opener(opener)
