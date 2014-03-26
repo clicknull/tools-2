@@ -8,7 +8,7 @@ gzipped in minutes on remote server. It supports configuration of source server,
 monitoring of crawling progress and monitoring of analyze.
 
 ## Architecture
-![Architecture](https://www.dropbox.com/s/cead9fz0cv4q2x4/logcrawler_arch.jpg)
+![Architecture](https://dl.dropboxusercontent.com/u/94696700/logcrawler_arch.jpg)
 
 ## Requirements
 
