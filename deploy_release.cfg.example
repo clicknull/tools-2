@@ -1,0 +1,19 @@
+# Alpha deployment config
+# Usage:
+# 
+# 1. Customize your own config file. If you do not specify path of config file by option -f, deploy 
+#    script will use deploy_{environment}.cfg as the default. So, you can run:
+#    $ cp deploy_release.cfg.example deploy_release.cfg
+#    $ vi deploy_release.cfg
+#
+# 2. Execute deployment for release environment.
+#    $ python deploy.py -t TAGNAME release
+#
+# More details, run:
+#    $ python deploy.py --help
+
+SSH_AGENT_HOST = '192.168.8.100'
+SSH_AGENT_PORT = 5044
+SSH_AGENT_USER = 'tanjing'
+SSH_AGENT_KEY  = './TANJING'
+

@@ -3,11 +3,13 @@
 
 ## Overview
 
-Logcrawler is a read-time oriented, high-level log crawling framework, used to crawl log files that
+Logcrawler is a high-level log crawling framework, used to crawl log files that
 gzipped in minutes on remote server. It supports configuration of source server,
 monitoring of crawling progress and monitoring of analyze.
 
 
+## Architecture
+![Architecture](http://redmine.funshion.com/redmine/attachments/download/44487/_arch.jpg)
 ## Requirements
 
 * Python 2.6 or up

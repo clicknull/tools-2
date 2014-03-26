@@ -11,6 +11,7 @@ from logcrawler.conf.config import CELERY_BROKER, CELERY_BACKEND, CELERY_WORKER_
 BROKER_URL = CELERY_BROKER
 CELERY_RESULT_BACKEND = CELERY_BACKEND
 
+CELERY_DISABLE_RATE_LIMITS = True
 
 DEFAULT_QUEUE = (
     Queue('default', Exchange('default'), routing_key='default'),

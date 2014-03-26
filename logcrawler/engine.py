@@ -5,20 +5,25 @@
 """
 
 import Queue
+import datetime
+import os
+import random
+import multiprocessing
 import time
+import traceback
+
 from threading import Thread, Timer
 from thread import get_ident
 
 from logcrawler.daemon import Daemon
 from logcrawler.factory import TaskFactory
-from logcrawler.probe import update_idc_current_status
 from logcrawler.conf import config
 from logcrawler.cron import Cron
+from logcrawler.tasks import task as task_executer
 from logcrawler import common, tasks
 
 
-LOG = common.get_logger(filename=__file__, topic=__file__)
-
+logger = common.get_logger(filename=__file__, topic=__file__)
 
 class Engine(object):
     def __init__(self, spider=None, analyzer=None, schedule_interval=30):
@@ -57,6 +62,11 @@ class Engine(object):
         else:
             return None
 
+    def retry_task(self, task, delay=30):
+        humanized_deadline = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(task['deadline']))
+        logger.warning('Retry download task [%s] with %ds, deadline %s' % (task['url'], delay, humanized_deadline))
+        self.put_task(task, delay)
+
     def terminate(self):
         """ Terminate the engine.
         """
@@ -73,7 +83,7 @@ class Engine(object):
         self.scheduler.add_job(interval, callback, args, kwargs)
 
     def start_scheduler(self):
-        LOG.info(msg="Start scheduler")
+        logger.info(msg="Start scheduler")
         self.scheduler.start()
 
     def stop_scheduler(self):
@@ -94,7 +104,7 @@ class Engine(object):
         try:
             task = self._task_queue.get(block=block, timeout=timeout)
         except Queue.Empty:
-            LOG.warn(msg="get message from _task_queue: timeout")
+            logger.warn(msg="get message from _task_queue: timeout")
             return {}
         self._task_queue.task_done()
         return task
@@ -104,7 +114,7 @@ class Engine(object):
             try:
                 self._task_queue.put(task, block)
             except Queue.Full:
-                LOG.warn(msg="reput failed: _task_queue is full")
+                logger.warn(msg="reput failed: _task_queue is full")
         else:
             self._timer = Timer(delay, self._task_queue.put, [task, block])
             self._timer.start()
@@ -126,7 +136,7 @@ class Engine(object):
         try:
             self._result_queue.put(result, block=False)
         except Queue.Full:
-            LOG.warn(msg="put message to result queue: full")
+            logger.warn(msg="put message to result queue: full")
 
     def filter_task_results(self):
         """ Get successful task result and discard failed task result.
@@ -147,17 +157,16 @@ class Engine(object):
     def check(self):
         """ Check result of download tasks.
         """
-        LOG.info(msg="Start check thread [%d]" % get_ident())
+        logger.info(msg="Start check thread [%d]" % get_ident())
 
         while not self._is_checker_stopped:
-            for async_result in self.filter_task_results():
-                download_result = async_result.get()
-                result, path, hostname = download_result['result'], download_result['local_path'], download_result['hostname']
-                if result in ['success']:
-                    # do analyze
-                    if self.analyze_callback:
-                        LOG.info(msg="Analyze %s on host %s" % (path, hostname))
-                        self.analyze_callback(path, hostname)
+            for task_result in self.filter_task_results():
+                result = task_result.get()
+                url, msg, deadline = result['url'], result['result'], result['deadline']
+                if msg in ['httperr', 'socketerr'] and \
+                    deadline and deadline > time.time():
+                    # retry task with delay
+                    self.retry_task({'url': url, 'deadline': deadline})
             time.sleep(0.1)
 
 

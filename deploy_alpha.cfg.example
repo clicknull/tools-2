@@ -1,0 +1,29 @@
+# Alpha deployment config
+# Usage:
+# 
+# 1. Customize your own config file. If you do not specify path of config file by option -f, deploy 
+#    script will use deploy_{environment}.cfg as the default. So, you can run:
+#    $ cp deploy_alpha.cfg.example deploy_alpha.cfg
+#    $ vi deploy_alpha.cfg
+#
+# 2. Execute deployment for alpha environment.
+#    $ python deploy.py alpha
+#    Maybe you'd like to clean alpha environment, run:
+#    $ python deploy.py alpha clean
+#
+# More details, run:
+#    $ python deploy.py --help
+
+
+
+HOSTS_MASTER = ['192.168.16.202']
+HOSTS_WORKER = [
+    '192.168.16.203',
+    # '192.168.16.204'
+]
+
+GIT_ROOT = '/home/logcrawler'
+GIT_REPO = 'git@192.168.16.205:/home/git_source/logcrawler.git'
+
+SSH_USER = 'root'
+SSH_PASSWORD = 'funshion'
