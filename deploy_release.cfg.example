@@ -12,8 +12,8 @@
 # More details, run:
 #    $ python deploy.py --help
 
-SSH_AGENT_HOST = '192.168.8.100'
-SSH_AGENT_PORT = 5044
-SSH_AGENT_USER = 'tanjing'
-SSH_AGENT_KEY  = './TANJING'
+SSH_AGENT_HOST = ''
+SSH_AGENT_PORT = 
+SSH_AGENT_USER = ''
+SSH_AGENT_KEY  = ''
 
