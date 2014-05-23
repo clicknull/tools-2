@@ -19,11 +19,10 @@
 HOSTS_MASTER = ['192.168.16.202']
 HOSTS_WORKER = [
     '192.168.16.203',
-    # '192.168.16.204'
 ]
 
-GIT_ROOT = '/home/logcrawler'
-GIT_REPO = 'git@192.168.16.205:/home/git_source/logcrawler.git'
+GIT_ROOT = ''
+GIT_REPO = ''
 
-SSH_USER = 'root'
-SSH_PASSWORD = 'funshion'
+SSH_USER = ''
+SSH_PASSWORD = ''
